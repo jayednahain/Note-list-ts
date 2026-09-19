@@ -11,3 +11,16 @@ export interface ApiError {
   type: ErrorType;
   message: string;
 }
+
+export interface Post {
+  id: number;
+  userId: number;
+  title: string;
+  body: string;
+}
+
+export interface CreatePostPayload {
+  title: string;
+  body: string;
+  userId: number;
+}
