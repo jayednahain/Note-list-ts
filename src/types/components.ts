@@ -16,3 +16,7 @@ export interface SuccessModalProps {
   message?: string;
   onButtonPress: () => void;
 }
+
+export interface PostCardProps {
+  item: Post;
+}

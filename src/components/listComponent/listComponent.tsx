@@ -1,6 +1,7 @@
 import { Post } from "@/types/post";
-import { FlatList, Text, View } from "react-native";
+import { FlatList } from "react-native";
 import { ListComponentProps } from "../../types/components";
+import PostCard from "../cardComponent/postCard";
 
 export default function ListComponent(props: ListComponentProps) {
   let { data } = props;
@@ -8,14 +9,7 @@ export default function ListComponent(props: ListComponentProps) {
     <FlatList<Post>
       data={data}
       keyExtractor={(item) => item.id.toString()}
-      renderItem={({ item }) => (
-        <View
-          style={{ padding: 12, borderBottomWidth: 1, borderColor: "#eee" }}
-        >
-          <Text style={{ fontWeight: "bold" }}>{item.title}</Text>
-          <Text numberOfLines={2}>{item.body}</Text>
-        </View>
-      )}
+      renderItem={({ item }) => <PostCard item={item} />}
     />
   );
 }
