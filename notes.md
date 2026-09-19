@@ -1,19 +1,23 @@
-- const মানে "variable এর নাম নতুন কিছুর দিকে point করতে পারবে না"
-- "loosely typed": শব্দটা programming এ আরেকটা সাধারণ অর্থেও ব্যবহার হয় — কোনো language কে বোঝাতে, যেমন JavaScript, Python, PHP — যেখানে variable এর type সহজেই বদলে যেতে পারে আর language খুব কম type checking করে
-- strongly type: এর বিপরীতে TypeScript, Java, Rust এর মতো "strongly typed" language
+# TypeScript নোটস — টপিক অনুযায়ী সাজানো
 
-- TypeScript offers two ways to work with types:
-  Explicit Typing:
-  When the initial value might not be the final type
+## ভেরিয়েবল ডিক্লেয়ারেশন ও টাইপিং বেসিক্স
 
-Type Inference:
-TypeScript can automatically determine (infer) the type of a variable based on its initial value:
+- **const** মানে "variable-এর নাম নতুন কোনো কিছুর দিকে point করতে পারবে না" — অর্থাৎ reference বদলানো যাবে না।
+- **"Loosely typed"**: শব্দটা প্রোগ্রামিং-এ আরেকটা সাধারণ অর্থেও ব্যবহার হয় — এমন কোনো language বোঝাতে (যেমন JavaScript, Python, PHP) যেখানে variable-এর type সহজেই বদলে যেতে পারে এবং language খুব কম type checking করে।
+- এর বিপরীতে TypeScript, Java, Rust-এর মতো ভাষাগুলোকে বলা হয় **"strongly typed"**।
 
-- When TypeScript Can't Infer Types
+## Explicit Typing ও Type Inference
 
-- define Can't Infer Types data
+TypeScript-এ দুইভাবে type নিয়ে কাজ করা যায়:
 
-```js
+- **Explicit Typing**: যখন initial value শেষ পর্যন্ত একই type নাও থাকতে পারে, তখন type সরাসরি লিখে দেওয়া হয়।
+- **Type Inference**: TypeScript নিজে থেকেই variable-এর initial value দেখে তার type অনুমান (infer) করে নিতে পারে।
+
+## Type Assertion ও Runtime Validation
+
+TypeScript যখন নিজে থেকে type বুঝতে পারে না (যেমন `JSON.parse`-এর result), তখন `as` দিয়ে type assert করা যায়:
+
+```ts
 type User = {
   name: string;
   age: number;
@@ -21,14 +25,15 @@ type User = {
 
 const data = JSON.parse('{ "name": "Alice", "age": 30 }') as User;
 
-console.log(data.name);  // ✅ string হিসেবে জানে, autocomplete পাবেন
-console.log(data.email); // ❌ Error! User type এ "email" নেই
+console.log(data.name); // ✅ string হিসেবে জানে, autocomplete পাবেন
+console.log(data.email); // ❌ Error! User type-এ "email" নেই
 ```
 
-⚠️ সতর্কতা: as User মানে আপনি TypeScript কে বলছেন "আমাকে বিশ্বাস করো, এটা User shape এর ই হবে" — কিন্তু TypeScript নিজে verify করে না। যদি JSON টা আসলে ভিন্ন shape এর হয় (যেমন age না থেকে years থাকে), তাও কোনো error দিবে না compile time এ — runtime এ ভুল data পাবেন।
-use import { z } from 'zod';
+⚠️ সতর্কতা: `as User` মানে হলো TypeScript-কে বলা "আমাকে বিশ্বাস করো, এটা User shape-এরই হবে" — কিন্তু TypeScript নিজে থেকে এটা verify করে না। JSON আসলে ভিন্ন shape-এর হলেও (যেমন `age`-এর বদলে `years` থাকলে) compile time-এ কোনো error আসবে না — runtime-এ ভুল data পাওয়া যাবে।
 
-```js
+এই সমস্যা সমাধানে `zod`-এর মতো library দিয়ে runtime-এ সত্যিকারের validation করা যায়:
+
+```ts
 import { z } from "zod"; // একটা popular library
 
 const UserSchema = z.object({
@@ -39,132 +44,81 @@ const UserSchema = z.object({
 const parsed = JSON.parse('{ "name": "Alice", "age": 30 }');
 const data = UserSchema.parse(parsed); // এখন সত্যিই check হয়, ভুল হলে throw করবে
 
-console.log(data.name); // ✅ TypeScript ও জানে, runtime এও validated
+console.log(data.name); // ✅ TypeScript-ও জানে, runtime-এও validated
 ```
 
-- when we use any , like this
+## Any Type
 
-```js
-// ১. পুরনো JS code কে ধীরে ধীরে TS এ migrate করার সময়
+কখন `any` ব্যবহার করা হয়:
+
+```ts
+// ১. পুরনো JS code ধীরে ধীরে TS-এ migrate করার সময়
 let legacyData: any = getDataFromOldSystem();
 
-// ২. তৃতীয় পক্ষের (third-party) library যেখানে type definition নেই
+// ২. তৃতীয় পক্ষের (third-party) library, যেখানে type definition নেই
 const result: any = someUntypedLibraryFunction();
 
-// ৩. একদম generic/dynamic data (কিন্তু এক্ষেত্রে 'unknown' বেশি ভালো, নিচে দেখুন)
+// ৩. একদম generic/dynamic data (তবে এক্ষেত্রে 'unknown' বেশি ভালো, নিচে দেখুন)
 function processAnything(data: any) {
   console.log(data);
 }
 ```
 
-- any আর unknown এর মূল পার্থক্য — practically দেখি
+## Any vs Unknown
 
-```js
-// any দিয়ে — কোনো বাধা নেই, কিন্তু বিপদজনক
+`any` আর `unknown`-এর মূল পার্থক্য — practically দেখা যাক:
+
+```ts
+// any দিয়ে — কোনো বাধা নেই, কিন্তু বিপজ্জনক
 let a: any = true;
-console.log(a.toUpperCase()); // ✅ TypeScript চুপ, কিন্তু runtime এ crash:
-                                // "TypeError: a.toUpperCase is not a function"
+console.log(a.toUpperCase()); // ✅ TypeScript চুপ, কিন্তু runtime-এ crash:
+// "TypeError: a.toUpperCase is not a function"
 
 // unknown দিয়ে — TypeScript বাধ্য করবে
 let u: unknown = true;
-console.log(u.toUpperCase()); // ❌ Compile time এ ই error:
-                                // "Object is of type 'unknown'"
+console.log(u.toUpperCase()); // ❌ Compile time-এই error:
+// "Object is of type 'unknown'"
 ```
 
-আগে (পুরনো TS এ) catch (error) এর type ছিল any, তাই সরাসরি error.message লেখা যেত (কিন্তু বিপদজনক ছিল, কারণ কেউ যদি throw "just a string" করে, তাহলে .message crash করত)। এখন unknown হওয়ায় TypeScript বাধ্য করে আগে check করতে।
+আগে (পুরনো TS-এ) `catch (error)`-এর type ছিল `any`, তাই সরাসরি `error.message` লেখা যেত — কিন্তু বিপজ্জনক ছিল, কারণ কেউ `throw "just a string"` করলে `.message` crash করত। এখন default type `unknown` হওয়ায় TypeScript ব্যবহার করার আগে check করতে বাধ্য করে।
 
-- array vs touples
+## Array vs Tuple
 
 ```ts
 // Array — same type, unlimited length
 const scores: number[] = [90, 85, 77, 60, 95]; // যত item ইচ্ছা
 
 // Tuple — different types, fixed length
-const point: [number, number] = [10, 20]; // ঠিক ২টা, দুইটাই number
+const point: [number, number] = [10, 20]; // ঠিক ২টা, দুটোই number
 const entry: [string, number, boolean] = ["Nahian", 25, true];
 ```
 
-- distructing topules
+Tuple destructuring:
 
 ```ts
 const graph: [number, number] = [55.2, 41.3];
 const [x, y] = graph;
 ```
 
-- function defult param
+## ফাংশন প্যারামিটার ও রিটার্ন টাইপ
+
+Default parameter:
 
 ```ts
-function getCUrrentUserData(name: string = "nahian") {
+function getCurrentUserData(name: string = "nahian") {
   return name ?? undefined;
 }
 ```
 
-- define object with type in ta
+Optional parameter:
 
 ```ts
-const car: { type: string; model: string; year: number } = {
-  type: "Toyota",
-  model: "Corolla",
-  year: 2009,
-};
-```
-
-- define optional properties in object
-
-```ts
-const car: { type: string; mileage?: number } = {
-  // no error
-  type: "Toyota",
-};
-car.mileage = 2000;
-```
-
-- Index Signatures
-
-```ts
-const nameAgeMap: {
-  [name: string]: number;
-} = {};
-```
-
-কিন্তু যদি Property Name আগে থেকে না জানি?
-
-```ts
-[name: string]: number
-
-[name: string]: number
-   ↑       ↑       ↑
-   |       |       |
-  key    key-এর   value-এর
-  name    type      type
-//Object-এর property name/key যেকোনো string হতে পারে, কিন্তু তার value অবশ্যই number হতে হবে।
-//
-```
-
-- how ndex Signatures helps on model /Dynamic properties
-
-```ts
-type Inventory = {
-  [productName: string]: number;
-};
-
-const inventory: Inventory = {
-  apple: 1000,
-  banana: 200,
-};
-
-console.log(inventory);
-```
-
-- function optinal param
-
-```ts
-function getCUrrentUserData(name?: string) {
+function getCurrentUserData(name?: string) {
   return name ?? undefined;
 }
 ```
 
-- how can we define return function type in ts
+Return type define করা:
 
 ```ts
 function getUserStatus(status: boolean): boolean {
@@ -176,12 +130,12 @@ function getUserCount(): number {
   return 1;
 }
 
-type user = {
+type User = {
   name: string;
   age: number;
 };
 
-function getCurrentUserInfo(name: string, age: number): user {
+function getCurrentUserInfo(name: string, age: number): User {
   return {
     name: name,
     age: age,
@@ -197,8 +151,7 @@ console.log(getUserCount());
 console.log(getCurrentUserInfo("jayed", 10));
 ```
 
-- void vs never
-  মূল পার্থক্য: void মানে "function শেষ হয়, কিন্তু কিছু return করে না" — never মানে "function কখনো শেষই হয় না (স্বাভাবিকভাবে)।"
+**void vs never** — মূল পার্থক্য: `void` মানে "function শেষ হয়, কিন্তু কিছু return করে না"; `never` মানে "function কখনো স্বাভাবিকভাবে শেষই হয় না"।
 
 ```ts
 let age: number = 25;
@@ -206,16 +159,72 @@ let age: number = 25;
 if (typeof age === "number") {
   console.log("এটা সবসময় true হবে");
 } else {
-  // এই else block এ কখনো আসাই সম্ভব না, কারণ age তো number ই
-  // তাই TypeScript এখানে age এর type ধরে নেয়: never
+  // এই else block-এ কখনো আসাই সম্ভব না, কারণ age তো number-ই
+  // তাই TypeScript এখানে age-এর type ধরে নেয়: never
 }
 ```
 
-মানে — age variable টা number বলে define করা, তাই typeof age === "number" সবসময় true হবে। else অংশে কখনো code আসবেই না। TypeScript সেই "কখনো না আসা" জায়গাটাকে বলে — এই জায়গায় type হলো never।
+এখানে `age` variable `number` হিসেবে define করা, তাই `typeof age === "number"` সবসময় true হবে। `else` অংশে কখনো code আসবেই না — TypeScript সেই "কখনো না আসা" জায়গার type ধরে নেয় `never`।
 
-- Discriminated Union
-  Discriminated Union হলো TypeScript-এর একটি feature, যার মাধ্যমে আমরা একাধিক সম্ভাব্য object type একসাথে define করতে পারি।
-  Discriminated Union Type হলো TypeScript-এর একটি union type যেখানে প্রতিটি object-এর একটি common literal property থাকে, যার মাধ্যমে TypeScript বুঝতে পারে কোন নির্দিষ্ট type-এর object ব্যবহার করা হচ্ছে।
+## Object Types ও Index Signature
+
+Type সহ object define করা:
+
+```ts
+const car: { type: string; model: string; year: number } = {
+  type: "Toyota",
+  model: "Corolla",
+  year: 2009,
+};
+```
+
+Optional property define করা:
+
+```ts
+const car: { type: string; mileage?: number } = {
+  // no error
+  type: "Toyota",
+};
+car.mileage = 2000;
+```
+
+**Index Signature** — property-এর নাম আগে থেকে জানা না থাকলে:
+
+```ts
+const nameAgeMap: {
+  [name: string]: number;
+} = {};
+```
+
+```
+[name: string]: number
+   ↑       ↑       ↑
+   |       |       |
+  key    key-এর   value-এর
+  name    type      type
+// Object-এর property name/key যেকোনো string হতে পারে, কিন্তু তার value অবশ্যই number হতে হবে।
+```
+
+Dynamic property model করতে Index Signature যেভাবে সাহায্য করে:
+
+```ts
+type Inventory = {
+  [productName: string]: number;
+};
+
+const inventory: Inventory = {
+  apple: 1000,
+  banana: 200,
+};
+
+console.log(inventory);
+```
+
+## Discriminated Union
+
+Discriminated Union হলো TypeScript-এর একটি feature, যার মাধ্যমে একাধিক সম্ভাব্য object type একসাথে define করা যায়।
+
+Discriminated Union Type হলো এমন একটি union type, যেখানে প্রতিটি object-এর একটি common literal property থাকে, যার মাধ্যমে TypeScript বুঝতে পারে ঠিক কোন type-এর object ব্যবহার হচ্ছে।
 
 ```ts
 type Payment =
@@ -233,18 +242,17 @@ type Payment =
     };
 ```
 
-এখানে type হলো Discriminator(বৈষম্যকারী)।
-কারণ type এর value দেখে বোঝা যাচ্ছে payment কোন ধরনের:
+এখানে `type` হলো discriminator (বৈষম্যকারী) — কারণ `type`-এর value দেখেই বোঝা যায় payment কোন ধরনের।
 
-<!-- -- need to see -->
+## পরবর্তী পড়ার জন্য টপিক ও প্রশ্ন
 
-stop on : aliases_and_interface
-https://www.w3schools.com/typescript/typescript_aliases_and_interfaces.php
+নিচের টপিকগুলো এখনো পড়া বাকি — ইন্টারভিউতে প্রায় guaranteed জিজ্ঞেস করা হয়:
 
+1. [Type Aliases and Interfaces](https://www.w3schools.com/typescript/typescript_aliases_and_interfaces.php)
 2. Shallow copy vs Deep copy — পার্থক্য কী?
 3. Prototypal inheritance কীভাবে কাজ করে?
-4. (prototype chain) আর #4 (this binding) — এই দুইটা প্রায় guaranteed
+4. Prototype chain ও this binding — এই দুইটা প্রায় guaranteed
 5. Object.freeze() vs Object.seal()
-6. Object কম্পেয়ার (compare) করা যায় কীভাবে?
-7. Map vs plain Object — কখন কোনটা?
-8. Optional chaining আর Nullish coalescing
+6. Object compare করার উপায় কী কী?
+7. Map vs plain Object — কখন কোনটা ব্যবহার করবেন?
+8. Optional chaining ও Nullish coalescing
