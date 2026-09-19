@@ -1,5 +1,5 @@
 import { ApiError } from "../types/api";
-import { Post } from "../types/post";
+import { CreatePostPayload, Post } from "../types/post";
 
 const BASE_URL = "https://jsonplaceholder.typicode.com";
 
@@ -27,6 +27,37 @@ export async function getPosts(): Promise<Post[]> {
     }
 
     // fetch throws a plain TypeError when there's no network at all
+    const networkError: ApiError = {
+      type: "no-internet",
+      message: "Network request failed. Please check your connection.",
+    };
+    throw networkError;
+  }
+}
+
+export async function createPost(payload: CreatePostPayload): Promise<Post> {
+  try {
+    const response = await fetch(`${BASE_URL}/posts?_sort=id&_order=desc`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const error: ApiError = {
+        type: "server-error",
+        message: `Server responded with status ${response.status}`,
+      };
+      throw error;
+    }
+
+    const data: Post = await response.json();
+    return data;
+  } catch (err) {
+    if (err && typeof err === "object" && "type" in err) {
+      throw err as ApiError;
+    }
+
     const networkError: ApiError = {
       type: "no-internet",
       message: "Network request failed. Please check your connection.",

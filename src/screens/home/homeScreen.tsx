@@ -30,6 +30,11 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchPosts();
   }, [fetchPosts]);
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     fetchPosts();
+  //   }, [fetchPosts]),
+  // );
 
   const handleErrorButtonPress = () => {
     if (errorType === "no-internet") {
